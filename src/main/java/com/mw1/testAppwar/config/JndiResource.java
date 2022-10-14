@@ -1,45 +1,68 @@
 package com.mw1.testAppwar.config;
 
-import org.apache.catalina.Context;
-import org.apache.catalina.startup.Tomcat;
-import org.apache.tomcat.util.descriptor.web.ContextResource;
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
-import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.Environment;
+import org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jndi.JndiTemplate;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+import javax.naming.NamingException;
+import javax.persistence.EntityManagerFactory;
+import javax.sql.DataSource;
+import java.util.Properties;
 
 @Configuration
+@EnableTransactionManagement
+@PropertySource("classpath:persistence-jndi.properties")
+@ComponentScan("com.mw1.testAppwar")
+@EnableJpaRepositories(basePackages = "com.mw1.testAppwar.repository")
 public class JndiResource {
-    @Bean
-    public TomcatServletWebServerFactory tomcatFactory() {
-        return new TomcatServletWebServerFactory() {
-            @Override
-            protected TomcatWebServer getTomcatWebServer(Tomcat tomcat) {
-                tomcat.enableNaming();
-                return super.getTomcatWebServer(tomcat);
-            }
 
-            @Override
-            protected void postProcessContext(Context context) {
-                context.getNamingResources().addResource(getResource());
-            }
-        };
+    @Autowired
+    private Environment env;
+
+    @Bean
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory()
+            throws NamingException {
+        LocalContainerEntityManagerFactoryBean em
+                = new LocalContainerEntityManagerFactoryBean();
+        em.setDataSource(dataSource());
+
+        // rest of entity manager configuration
+        return em;
     }
 
-    public ContextResource getResource() {
-        ContextResource resource = new ContextResource();
-        resource.setName("jndi/mw-testDB"); // 사용될 jndi 이름
-        resource.setType("javax.sql.DataSource");
-        resource.setAuth("Container");
-        resource.setProperty("factory", "org.apache.commons.dbcp2.BasicDataSourceFactory");
+    @Bean
+    public DataSource dataSource() throws NamingException {
+        return (DataSource) new JndiTemplate().lookup(env.getProperty("jdbc.url"));
+    }
 
-        /* tomcat에 설정해야하지 않을까 함
-        // datasource 정보
-        resource.setProperty("driverClassName", "com.mysql.cj.jdbc.Driver");
-        resource.setProperty("url", "jdbc:mysql://localhost:3306/jndi?serverTimezone=UTC");
-        resource.setProperty("username", "root");
-        resource.setProperty("password", "root");
-        */
-        return resource;
+    @Bean
+    public PlatformTransactionManager transactionManager(EntityManagerFactory emf) {
+        JpaTransactionManager transactionManager = new JpaTransactionManager();
+        transactionManager.setEntityManagerFactory(emf);
+        return transactionManager;
+    }
+
+    // rest of persistence configuration
+    @Bean
+    public PersistenceExceptionTranslationPostProcessor exceptionTranslation(){
+        return new PersistenceExceptionTranslationPostProcessor();
+    }
+
+    Properties additionalProperties() {
+        Properties properties = new Properties();
+        properties.setProperty("hibernate.hbm2ddl.auto", "create-drop");
+        properties.setProperty("hibernate.dialect", "org.hibernate.dialect.MySQL5Dialect");
+
+        return properties;
     }
 }

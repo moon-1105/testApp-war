@@ -1,10 +1,13 @@
 package com.mw1.testAppwar.controller;
+import com.mw1.testAppwar.model.test;
+import com.mw1.testAppwar.service.MainService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import java.util.List;
 
 @Controller
 @RequestMapping("/")
@@ -16,7 +19,9 @@ public class MainController {
     }
     @GetMapping("/")
     public String mainPage(Model model){
-        model.addAttribute("data", "컨트롤러 데이터 테스트");
+        MainService sv = new MainService();
+        List<test> testData = sv.findAll();
+        model.addAttribute("data", testData.get(0).getName() );
         return "main";
     }
 }
