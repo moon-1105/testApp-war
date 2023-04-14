@@ -17,11 +17,9 @@ public class MainController {
     public String testPage(){
         return "index";
     }
+
     @GetMapping("/")
-    public String mainPage(Model model){
-        MainService sv = new MainService();
-        List<test> testData = sv.findAll();
-        model.addAttribute("data", testData.get(0).getName() );
+    public String mainPage(){
         return "main";
     }
 }

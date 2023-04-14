@@ -1,5 +1,5 @@
 
 spring:
-  datasource:
-    jndi-name: jndi/mw-testDB
+  jpa:
+    defer-datasource-initialization: false
 
